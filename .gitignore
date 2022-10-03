@@ -1,0 +1,5 @@
+test.db
+test.http
+db.sqlite3
+.pytest_cache
+mongo_data
