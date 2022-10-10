@@ -1,60 +1,50 @@
-from typing import List
+from fastapi import FastAPI
+from tortoise.contrib.fastapi import register_tortoise
+from models import (Supplier_Pydantic, Supplier_PydanticIn, Supplier)
+from utilities.common import dotdict
 
-from fastapi import FastAPI, HTTPException 
-from models import User_Pydantic, UserIn_Pydantic, Users 
-from pydantic import BaseModel 
+app = FastAPI()
 
-from tortoise.contrib.fastapi import HTTPNotFoundError, register_tortoise
+@app.get("/")
+def index():
+  return {"Message": "got to /docs for the API documentation"}
 
-app = FastAPI(title="Tortoise ORM FastAPI example")
+@app.post("/supplier")
+async def add_supplier(supplier_info: Supplier_PydanticIn):
+  supplier_obj = await Supplier.create(**supplier_info.dict(exclude_unset=True))
+  response = await Supplier_Pydantic.from_tortoise_orm(supplier_obj)
+  return {"status": "ok", "data": response}
 
-class Status(BaseModel):
-  message: str 
+@app.get("/supplier")
+async def get_all_suppliers():
+  response = await Supplier_Pydantic.from_queryset(Supplier.all())
+  return {"status": "ok", "data": response}
 
-@app.get("/users", response_model=List[User_Pydantic])
-async def get_users():
-  return await User_Pydantic.from_queryset(Users.all())
+@app.get("/supplier/{supplier_id}")
+async def get_specific_supplier(supplier_id: int):
+  response = await Supplier_Pydantic.from_queryset_single(Supplier.get(id=supplier_id))
+  return {"status": "ok", "data": response}
 
-@app.post("/users", response_model=User_Pydantic)
-async def create_user(user: UserIn_Pydantic):
-  user_obj = await Users.create(**user.dict(exclude_unset=True))
-  return await User_Pydantic.from_tortoise_orm(user_obj)
+@app.put("/supplier/{supplier_id}")
+async def update_supplier(supplier_id: int, update_info: Supplier_PydanticIn):
+  supplier = await Supplier.get(id=supplier_id)
+  update_info = dotdict(update_info.dict(exclude_unset=True))
+  supplier.name = update_info.name 
+  supplier.company = update_info.company
+  supplier.email = update_info.email
+  supplier.phone = update_info.phone
+  await supplier.save()
+  response = await Supplier_Pydantic.from_tortoise_orm(supplier)
+  return {"status": "ok", "data": response}
 
-@app.get(
-  "/user/{user_id}", 
-  response_model=User_Pydantic, 
-  responses={404: {"model": HTTPNotFoundError}}, 
-)
-async def get_user(user_id: int):
-  return await User_Pydantic.from_queryset_single(Users.get(id=user_id)) 
-
-@app.put(
-  "/user/{user_id}", 
-  response_model=User_Pydantic, 
-  responses={404: {"model": HTTPNotFoundError}}, 
-)
-async def update_user(user_id: int, user: UserIn_Pydantic):
-  await Users.filter(id=user_id).update(**user.dict(exclude_unset=True))
-  return await User_Pydantic.from_queryset_single(Users.get(id=user_id))
-
-@app.delete(
-  "/user/{user_id}", 
-  response_model=Status, 
-  responses={404: {"model": HTTPNotFoundError}}, 
-)
-async def delete_user(user_id: int):
-  deleted_count = await Users.filter(id=user_id).delete()
-  if not deleted_count:
-    raise HTTPException(
-      status_code=404, 
-      detail=f"User {user_id} not found", 
-    )
-  else:
-    return Status(message=f"Deleted user {user_id}") 
+@app.delete("/supplier/{supplier_id}")
+async def delete_supplier(supplier_id: int):
+  await Supplier.get(id=supplier_id).delete()
+  return {"status": "ok"}
 
 register_tortoise(
   app, 
-  db_url="sqlite://:memory:", 
+  db_url="sqlite://database.sqlite3", 
   modules={"models": ["models"]}, 
   generate_schemas=True, 
   add_exception_handlers=True, 

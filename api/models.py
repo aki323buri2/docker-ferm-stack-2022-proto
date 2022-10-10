@@ -1,24 +1,29 @@
-from tortoise import fields, models 
+from tortoise import fields 
+from tortoise.models import Model 
 from tortoise.contrib.pydantic import pydantic_model_creator
 
-class Users(models.Model):
-  id             = fields.IntField(pk=True)
-  username       = fields.CharField(max_length=20, unique=True)
-  name           = fields.CharField(max_length=50, null=True)
-  family_name    = fields.CharField(max_length=50, null=True)
-  category       = fields.CharField(max_length=30, default="misc")
-  ppassword_hash = fields.CharField(max_length=128, null=True)
-  created_at     = fields.DatetimeField(auto_now_add=True)
-  modified_at    = fields.DatetimeField(auto_now=True)
+class Product(Model):
+  id = fields.IntField(pk=True)
+  name = fields.CharField(max_length=30, nullable=False)
+  quantity_in_stock = fields.IntField(default=0)
+  quantity_sold = fields.IntField(default=0)
+  unit_price = fields.DecimalField(max_digits=8, decimal_places=2, default=0.00)
+  revenue = fields.DecimalField(max_digits=8, decimal_places=2, default=0.00)
 
-  def full_name(self) -> str: 
-    """
-    returns best name 
-    """
-    if self.name or self.family_name:
-      return f"{self.name or ''} {self.family_name or ''}".strip()
-    else:
-      return self.username
+  supplied_by = fields.ForeignKeyField(
+    "models.Supplier", 
+    related_name="goods_supplied", 
+  )
 
-User_Pydantic = pydantic_model_creator(Users, name="User")
-UserIn_Pydantic = pydantic_model_creator(Users, name="UserIn", exclude_readonly=True)
+class Supplier(Model):
+  id = fields.IntField(pk=True)
+  name = fields.CharField(max_length=20)
+  company = fields.CharField(max_length=20)
+  email = fields.CharField(max_length=100)
+  phone = fields.CharField(max_length=15)
+
+Product_Pydantic = pydantic_model_creator(Product, name="Product")
+Product_PydanticIn = pydantic_model_creator(Product, name="ProductIn", exclude_readonly=True)
+
+Supplier_Pydantic = pydantic_model_creator(Supplier, name="Supplier")
+Supplier_PydanticIn = pydantic_model_creator(Supplier, name="SupplierIn", exclude_readonly=True)
