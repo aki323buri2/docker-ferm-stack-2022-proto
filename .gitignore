@@ -1,4 +1,3 @@
-test.db
-db.sqlite3
+database.sqlite3
 .pytest_cache
-mongo_data
+node_modules/

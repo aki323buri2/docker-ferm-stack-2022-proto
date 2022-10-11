@@ -9,5 +9,49 @@ services:
     ports:
       - 8000:8000
       - 8001:8001
+    networks:
+      - this-network 
     volumes:
       - ./api:/app
+  
+  mongo:
+    container_name: mongo-server 
+    image: mongo 
+    restart: always 
+    networks:
+      - this-network 
+    environment: 
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example 
+    volumes:
+      - ./mongo/data/db:/data/db 
+      - ./mongo/configdb:/data/configdb
+
+  mongo-express:
+    container_name: mongo-express 
+    image: mongo-express 
+    restart: always 
+    ports: 
+      - 8081:8081 
+    networks:
+      - this-network 
+    depends_on:
+      - mongo 
+    environment: 
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: exampl 
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/ 
+
+  cra:
+    build:
+      context: ./cra
+      dockerfile: Dockerfile
+    volumes:
+      - ./cra:/usr/src/app # ローカルをコンテナ内にマウント
+    command: sh -c "cd /usr/src/app && yarn start"
+    ports:
+      - "3000:3000"
+    stdin_open: true 
+
+networks: 
+  this-network:
